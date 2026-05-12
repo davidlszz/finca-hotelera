@@ -4,8 +4,8 @@
   "description": "API REST para gestión de reservas y control administrativo - Finca Hotelera USC 2026",
   "main": "src/app.js",
   "scripts": {
-    "start": "node src/app.js",
-    "dev": "nodemon src/app.js",
+    "start": "node src/server.js",
+    "dev": "nodemon src/server.js",
     "seed": "node database/seed.js"
   },
   "dependencies": {
