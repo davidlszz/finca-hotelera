@@ -21,10 +21,9 @@ export default function Sidebar() {
   return (
     <aside className="w-64 min-h-screen bg-finca-dark flex flex-col">
       {/* Logo */}
-      <div className="px-6 py-6 border-b border-finca-mid">
-        <h1 className="text-white font-bold text-lg leading-tight">🌿 Finca Hotelera</h1>
-        <p className="text-green-300 text-xs mt-0.5">Sistema de Gestión</p>
-      </div>
+      <div className="flex flex-col items-center">
+  <img src="/LOGO_MIRADOR.png" alt="El Mirador" className="h-12 w-auto" />
+</div>
 
       {/* Navegación */}
       <nav className="flex-1 px-3 py-4 space-y-1">

@@ -1,4 +1,5 @@
 // Arranque local — usado por npm run dev / npm start
+require('dotenv').config(); 
 const app = require('./app');
 const { sequelize } = require('./models');
 

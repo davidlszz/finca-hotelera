@@ -24,8 +24,7 @@ export default function LoginPage() {
       <div className="w-full max-w-md">
         {/* Header */}
         <div className="text-center mb-8">
-          <div className="text-5xl mb-3">🌿</div>
-          <h1 className="text-3xl font-bold text-white">Finca Hotelera</h1>
+          <img src="/LOGO_MIRADOR.png" alt="Logo Mirador" className="logo mx-auto block" />
           <p className="text-green-200 mt-1">Sistema de Gestión Administrativa</p>
         </div>
 

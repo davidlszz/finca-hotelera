@@ -1,10 +1,12 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import api from '../api/axios';
+import { useAuth } from '../context/AuthContext';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import {
   BuildingOfficeIcon, CalendarDaysIcon, UsersIcon,
-  CurrencyDollarIcon, ExclamationTriangleIcon, CheckCircleIcon,
+  CurrencyDollarIcon, ExclamationTriangleIcon, CheckCircleIcon, PhotoIcon,
 } from '@heroicons/react/24/outline';
+import toast from 'react-hot-toast';
 
 const StatCard = ({ icon: Icon, value, label, color, sub }) => (
   <div className="stat-card">
@@ -23,15 +25,41 @@ const formatCOP = (n) =>
   new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 }).format(n);
 
 export default function DashboardPage() {
-  const [data, setData] = useState(null);
-  const [alerts, setAlerts] = useState([]);
-  const [rooms, setRooms] = useState([]);
+  const [data, setData]           = useState(null);
+  const [alerts, setAlerts]       = useState([]);
+  const [rooms, setRooms]         = useState([]);
+  const [heroImg, setHeroImg]     = useState('');
+  const [editHero, setEditHero]   = useState(false);
+  const [previewHero, setPreviewHero] = useState('');
+  const fileRef                   = useRef();
+  const { isAdmin }               = useAuth();
 
   useEffect(() => {
     api.get('/dashboard/summary').then(r => setData(r.data)).catch(() => {});
     api.get('/inventory/alerts').then(r => setAlerts(r.data)).catch(() => {});
     api.get('/rooms').then(r => setRooms(r.data)).catch(() => {});
+    api.get('/config').then(r => { if (r.data.hero_imagen) setHeroImg(r.data.hero_imagen); }).catch(() => {});
   }, []);
+
+  const handleHeroFile = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) { toast.error('La imagen no debe superar 5MB.'); return; }
+    const reader = new FileReader();
+    reader.onload = (ev) => setPreviewHero(ev.target.result);
+    reader.readAsDataURL(file);
+  };
+
+  const saveHero = async () => {
+    if (!previewHero) return;
+    try {
+      await api.put('/config', { hero_imagen: previewHero });
+      setHeroImg(previewHero);
+      setEditHero(false);
+      setPreviewHero('');
+      toast.success('Imagen del banner actualizada.');
+    } catch { toast.error('Error al guardar imagen.'); }
+  };
 
   if (!data) {
     return (
@@ -42,19 +70,78 @@ export default function DashboardPage() {
   }
 
   const ocupacionData = [
-    { name: 'Disponibles',    value: data.habitaciones.disponibles,    color: '#22c55e' },
-    { name: 'Ocupadas',       value: data.habitaciones.ocupadas,        color: '#ef4444' },
-    { name: 'Mantenimiento',  value: data.habitaciones.mantenimiento,   color: '#f59e0b' },
+    { name: 'Disponibles',   value: data.habitaciones.disponibles,  color: '#22c55e' },
+    { name: 'Ocupadas',      value: data.habitaciones.ocupadas,      color: '#ef4444' },
+    { name: 'Mantenimiento', value: data.habitaciones.mantenimiento, color: '#f59e0b' },
   ];
+
+  const imgSrc = heroImg || '/FINCA DASHBOARD.png';
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="page-title">Dashboard</h1>
-        <p className="text-gray-500 text-sm mt-1">
-          {new Date().toLocaleDateString('es-CO', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
-        </p>
+
+      {/* Banner hero */}
+      <div className="relative rounded-2xl overflow-hidden h-64 shadow-md group">
+        <img src={imgSrc} alt="El Mirador de Alcalá" className="w-full h-full object-cover" />
+        <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-black/30 to-transparent flex flex-col justify-center px-8">
+          <h1 className="text-white text-2xl font-bold drop-shadow">Bienvenido a El Mirador de Alcalá</h1>
+          <p className="text-white/85 text-sm mt-1 drop-shadow">
+            Gestione su estancia, inventarios y huéspedes con la calidez del café colombiano.
+          </p>
+          <p className="text-white/70 text-xs mt-2">
+            {new Date().toLocaleDateString('es-CO', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+          </p>
+        </div>
+
+        {/* Botón editar imagen (solo admin) */}
+        {isAdmin && (
+          <button
+            className="absolute top-3 right-3 flex items-center gap-1.5 bg-white/80 hover:bg-white text-gray-700 text-xs font-medium px-3 py-1.5 rounded-full shadow transition-all opacity-0 group-hover:opacity-100"
+            onClick={() => { setEditHero(true); setPreviewHero(''); }}
+          >
+            <PhotoIcon className="w-4 h-4" /> Cambiar imagen
+          </button>
+        )}
       </div>
+
+      {/* Modal editar imagen banner */}
+      {editHero && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl w-full max-w-md shadow-xl p-6 space-y-4">
+            <h2 className="section-title">Cambiar imagen del banner</h2>
+
+            <div
+              className="relative w-full h-48 rounded-xl overflow-hidden border-2 border-dashed border-gray-200 cursor-pointer hover:border-finca-mid transition-colors group"
+              onClick={() => fileRef.current.click()}
+            >
+              {previewHero ? (
+                <img src={previewHero} alt="preview" className="w-full h-full object-cover" />
+              ) : (
+                <div className="flex flex-col items-center justify-center h-full text-gray-400 gap-2">
+                  <PhotoIcon className="w-10 h-10" />
+                  <span className="text-sm">Haz clic para seleccionar imagen</span>
+                  <span className="text-xs">JPG, PNG — máx. 5MB</span>
+                </div>
+              )}
+              {previewHero && (
+                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
+                  <span className="opacity-0 group-hover:opacity-100 text-white text-sm font-medium bg-black/50 px-3 py-1 rounded-full transition-opacity">
+                    Cambiar
+                  </span>
+                </div>
+              )}
+            </div>
+            <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleHeroFile} />
+
+            <div className="flex gap-3">
+              <button className="btn-secondary flex-1" onClick={() => setEditHero(false)}>Cancelar</button>
+              <button className="btn-primary flex-1" disabled={!previewHero} onClick={saveHero}>
+                Guardar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* KPIs */}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
@@ -86,7 +173,6 @@ export default function DashboardPage() {
               </Bar>
             </BarChart>
           </ResponsiveContainer>
-          {/* Mapa de habitaciones */}
           <div className="mt-4 grid grid-cols-4 gap-2">
             {rooms.map(r => (
               <div key={r.id} title={`${r.numero} - ${r.tipo}`}

@@ -25,6 +25,7 @@ exports.login = async (req, res) => {
     const token = generateToken(user);
     res.json({ token, user: user.toJSON() });
   } catch (err) {
+    console.error('❌ LOGIN ERROR:', err);
     res.status(500).json({ error: 'Error interno del servidor.' });
   }
 };

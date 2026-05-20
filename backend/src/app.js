@@ -43,6 +43,7 @@ app.use(async (req, res, next) => {
 });
 
 app.use('/api/auth',         require('./routes/auth'));
+app.use('/api/config',       require('./routes/config'));
 app.use('/api/dashboard',    require('./routes/dashboard'));
 app.use('/api/rooms',        require('./routes/rooms'));
 app.use('/api/clients',      require('./routes/clients'));

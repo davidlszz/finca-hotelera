@@ -35,6 +35,10 @@ const Room = sequelize.define('Room', {
     type: DataTypes.TEXT,
     allowNull: true,
   },
+  imagen: {
+    type: DataTypes.TEXT('long'),  // base64 puede ser largo
+    allowNull: true,
+  },
 }, {
   tableName: 'habitaciones',
   indexes: [{ fields: ['estado'] }, { fields: ['numero'] }],
