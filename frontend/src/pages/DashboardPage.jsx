@@ -5,6 +5,7 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 
 import {
   BuildingOfficeIcon, CalendarDaysIcon, UsersIcon,
   CurrencyDollarIcon, ExclamationTriangleIcon, CheckCircleIcon, PhotoIcon,
+  ChevronLeftIcon, ChevronRightIcon,
 } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
 
@@ -24,21 +25,120 @@ const StatCard = ({ icon: Icon, value, label, color, sub }) => (
 const formatCOP = (n) =>
   new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 }).format(n);
 
+// Calendario de ocupación
+function OcupacionCalendar({ reservations, month, onPrev, onNext }) {
+  const year  = month.getFullYear();
+  const mon   = month.getMonth();
+
+  // Días ocupados: cualquier reserva activa que cruce el mes
+  const occupiedDays = new Set();
+  reservations.forEach(r => {
+    if (!['Confirmada', 'Check-in'].includes(r.estado)) return;
+    const start = new Date(r.fecha_ingreso);
+    const end   = new Date(r.fecha_salida);
+    const cur   = new Date(start);
+    while (cur <= end) {
+      if (cur.getFullYear() === year && cur.getMonth() === mon) {
+        occupiedDays.add(cur.getDate());
+      }
+      cur.setDate(cur.getDate() + 1);
+    }
+  });
+
+  // Construir grilla
+  const firstDay  = new Date(year, mon, 1).getDay(); // 0=dom
+  const daysInMonth = new Date(year, mon + 1, 0).getDate();
+  const today     = new Date();
+  const isToday   = (d) => today.getFullYear() === year && today.getMonth() === mon && today.getDate() === d;
+
+  const blanks = Array(firstDay).fill(null);
+  const days   = Array.from({ length: daysInMonth }, (_, i) => i + 1);
+
+  const monthLabel = month.toLocaleDateString('es-CO', { month: 'long', year: 'numeric' });
+
+  return (
+    <div className="card">
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2">
+          <CalendarDaysIcon className="w-5 h-5 text-finca-mid" />
+          <h2 className="section-title">Calendario de Ocupación</h2>
+        </div>
+        <div className="flex items-center gap-2">
+          <button onClick={onPrev} className="p-1 rounded-lg hover:bg-gray-100 transition-colors">
+            <ChevronLeftIcon className="w-4 h-4 text-gray-600" />
+          </button>
+          <span className="text-sm font-medium text-gray-700 capitalize w-36 text-center">{monthLabel}</span>
+          <button onClick={onNext} className="p-1 rounded-lg hover:bg-gray-100 transition-colors">
+            <ChevronRightIcon className="w-4 h-4 text-gray-600" />
+          </button>
+        </div>
+      </div>
+
+      {/* Cabecera días */}
+      <div className="grid grid-cols-7 mb-1">
+        {['L','M','X','J','V','S','D'].map(d => (
+          <div key={d} className="text-center text-xs font-semibold text-gray-400 py-1">{d}</div>
+        ))}
+      </div>
+
+      {/* Días */}
+      <div className="grid grid-cols-7 gap-1">
+        {blanks.map((_, i) => <div key={`b${i}`} />)}
+        {days.map(d => {
+          const occupied = occupiedDays.has(d);
+          const todayMark = isToday(d);
+          return (
+            <div key={d}
+              className={`h-8 flex items-center justify-center rounded-md text-xs font-medium transition-colors
+                ${occupied
+                  ? 'bg-green-500 text-white'
+                  : 'bg-gray-50 text-gray-600 hover:bg-gray-100'}
+                ${todayMark ? 'ring-2 ring-finca-mid ring-offset-1' : ''}
+              `}
+            >
+              {d}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Leyenda */}
+      <div className="flex gap-4 mt-4 pt-3 border-t border-gray-100">
+        <div className="flex items-center gap-1.5">
+          <div className="w-3 h-3 rounded-sm bg-green-500" />
+          <span className="text-xs text-gray-500">Ocupado</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <div className="w-3 h-3 rounded-sm bg-gray-100 border border-gray-200" />
+          <span className="text-xs text-gray-500">Disponible</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <div className="w-3 h-3 rounded-sm border-2 border-finca-mid" />
+          <span className="text-xs text-gray-500">Hoy</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function DashboardPage() {
-  const [data, setData]           = useState(null);
-  const [alerts, setAlerts]       = useState([]);
-  const [rooms, setRooms]         = useState([]);
-  const [heroImg, setHeroImg]     = useState('');
-  const [editHero, setEditHero]   = useState(false);
-  const [previewHero, setPreviewHero] = useState('');
-  const fileRef                   = useRef();
-  const { isAdmin }               = useAuth();
+  const [data, setData]                   = useState(null);
+  const [alerts, setAlerts]               = useState([]);
+  const [rooms, setRooms]                 = useState([]);
+  const [reservations, setReservations]   = useState([]);
+  const [heroImg, setHeroImg]             = useState('');
+  const [editHero, setEditHero]           = useState(false);
+  const [previewHero, setPreviewHero]     = useState('');
+  const [calMonth, setCalMonth]           = useState(new Date());
+  const fileRef                           = useRef();
+  const { isAdmin }                       = useAuth();
 
   useEffect(() => {
     api.get('/dashboard/summary').then(r => setData(r.data)).catch(() => {});
     api.get('/inventory/alerts').then(r => setAlerts(r.data)).catch(() => {});
     api.get('/rooms').then(r => setRooms(r.data)).catch(() => {});
     api.get('/config').then(r => { if (r.data.hero_imagen) setHeroImg(r.data.hero_imagen); }).catch(() => {});
+    api.get('/reservations').then(r => setReservations(r.data)).catch(() => {});
   }, []);
 
   const handleHeroFile = (e) => {
@@ -77,6 +177,9 @@ export default function DashboardPage() {
 
   const imgSrc = heroImg || '/FINCA DASHBOARD.png';
 
+  const prevMonth = () => setCalMonth(m => new Date(m.getFullYear(), m.getMonth() - 1, 1));
+  const nextMonth = () => setCalMonth(m => new Date(m.getFullYear(), m.getMonth() + 1, 1));
+
   return (
     <div className="space-y-6">
 
@@ -92,8 +195,6 @@ export default function DashboardPage() {
             {new Date().toLocaleDateString('es-CO', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
           </p>
         </div>
-
-        {/* Botón editar imagen (solo admin) */}
         {isAdmin && (
           <button
             className="absolute top-3 right-3 flex items-center gap-1.5 bg-white/80 hover:bg-white text-gray-700 text-xs font-medium px-3 py-1.5 rounded-full shadow transition-all opacity-0 group-hover:opacity-100"
@@ -109,7 +210,6 @@ export default function DashboardPage() {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl w-full max-w-md shadow-xl p-6 space-y-4">
             <h2 className="section-title">Cambiar imagen del banner</h2>
-
             <div
               className="relative w-full h-48 rounded-xl overflow-hidden border-2 border-dashed border-gray-200 cursor-pointer hover:border-finca-mid transition-colors group"
               onClick={() => fileRef.current.click()}
@@ -132,12 +232,9 @@ export default function DashboardPage() {
               )}
             </div>
             <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleHeroFile} />
-
             <div className="flex gap-3">
               <button className="btn-secondary flex-1" onClick={() => setEditHero(false)}>Cancelar</button>
-              <button className="btn-primary flex-1" disabled={!previewHero} onClick={saveHero}>
-                Guardar
-              </button>
+              <button className="btn-primary flex-1" disabled={!previewHero} onClick={saveHero}>Guardar</button>
             </div>
           </div>
         </div>
@@ -188,37 +285,49 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Alertas stock */}
-        <div className="card">
-          <div className="flex items-center gap-2 mb-4">
-            <ExclamationTriangleIcon className="w-5 h-5 text-yellow-500" />
-            <h2 className="section-title">Alertas de Stock</h2>
-            {alerts.length > 0 && (
-              <span className="badge badge-yellow ml-auto">{alerts.length}</span>
+        {/* Columna derecha: Alertas + Calendario */}
+        <div className="flex flex-col gap-6">
+          {/* Alertas stock */}
+          <div className="card">
+            <div className="flex items-center gap-2 mb-4">
+              <ExclamationTriangleIcon className="w-5 h-5 text-yellow-500" />
+              <h2 className="section-title">Alertas de Stock</h2>
+              {alerts.length > 0 && (
+                <span className="badge badge-yellow ml-auto">{alerts.length}</span>
+              )}
+            </div>
+            {alerts.length === 0 ? (
+              <div className="flex flex-col items-center gap-2 py-6 text-gray-400">
+                <CheckCircleIcon className="w-10 h-10 text-green-400" />
+                <p className="text-sm">Inventario en buen estado</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {alerts.map(p => (
+                  <div key={p.id} className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0">
+                    <div>
+                      <p className="text-sm font-medium text-gray-800">{p.nombre}</p>
+                      <p className="text-xs text-gray-400">Mín: {p.stock_minimo} {p.unidad_medida}</p>
+                    </div>
+                    <span className={`badge ${parseFloat(p.stock_actual) === 0 ? 'badge-red' : 'badge-yellow'}`}>
+                      {p.stock_actual} {p.unidad_medida}
+                    </span>
+                  </div>
+                ))}
+              </div>
             )}
           </div>
-          {alerts.length === 0 ? (
-            <div className="flex flex-col items-center gap-2 py-6 text-gray-400">
-              <CheckCircleIcon className="w-10 h-10 text-green-400" />
-              <p className="text-sm">Inventario en buen estado</p>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {alerts.map(p => (
-                <div key={p.id} className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0">
-                  <div>
-                    <p className="text-sm font-medium text-gray-800">{p.nombre}</p>
-                    <p className="text-xs text-gray-400">Mín: {p.stock_minimo} {p.unidad_medida}</p>
-                  </div>
-                  <span className={`badge ${parseFloat(p.stock_actual) === 0 ? 'badge-red' : 'badge-yellow'}`}>
-                    {p.stock_actual} {p.unidad_medida}
-                  </span>
-                </div>
-              ))}
-            </div>
-          )}
+
+          {/* Calendario de ocupación */}
+          <OcupacionCalendar
+            reservations={reservations}
+            month={calMonth}
+            onPrev={prevMonth}
+            onNext={nextMonth}
+          />
         </div>
       </div>
+
     </div>
   );
 }
