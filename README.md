@@ -1,4 +1,4 @@
-# 🌿 Finca Hotelera — Sistema de Gestión
+# El Mirador — Sistema de Gestión
 
 **Prototipo funcional** · Universidad Santiago de Cali · Proyecto TI 2026  
 *Diseño de un prototipo de plataforma web para la gestión de reservas y control administrativo en una finca hotelera*
