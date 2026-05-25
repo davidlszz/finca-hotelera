@@ -104,3 +104,52 @@ exports.checkAvailability = async (req, res) => {
     res.status(500).json({ error: 'Error al verificar disponibilidad.' });
   }
 };
+
+// Marcar limpieza: pone en Mantenimiento
+exports.marcarLimpieza = async (req, res) => {
+  try {
+    const room = await Room.findByPk(req.params.id);
+    if (!room) return res.status(404).json({ error: 'Habitación no encontrada.' });
+    await room.update({ estado: 'Mantenimiento' });
+    res.json(room);
+  } catch (err) {
+    res.status(500).json({ error: 'Error al marcar limpieza.' });
+  }
+};
+
+// Marcar limpiada: vuelve a Disponible
+exports.marcarLimpiada = async (req, res) => {
+  try {
+    const room = await Room.findByPk(req.params.id);
+    if (!room) return res.status(404).json({ error: 'Habitación no encontrada.' });
+    await room.update({ estado: 'Disponible' });
+    res.json(room);
+  } catch (err) {
+    res.status(500).json({ error: 'Error al marcar como limpiada.' });
+  }
+};
+
+// Reservas futuras de una habitación
+exports.getReservasFuturas = async (req, res) => {
+  try {
+    const hoy = new Date().toISOString().split('T')[0];
+    const detalles = await ReservationDetail.findAll({
+      where: { habitacion_id: req.params.id },
+      include: [{
+        model: Reservation,
+        as: 'reserva',
+        where: {
+          fecha_salida: { [Op.gte]: hoy },
+          estado: { [Op.in]: ['Confirmada', 'Check-in'] },
+        },
+        include: [{ association: 'cliente' }],
+        required: true,
+      }],
+      order: [[{ model: Reservation, as: 'reserva' }, 'fecha_ingreso', 'ASC']],
+    });
+    res.json(detalles.map(d => d.reserva));
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Error al obtener reservas.' });
+  }
+};

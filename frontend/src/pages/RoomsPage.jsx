@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
 import {
   PlusIcon, PencilIcon, TrashIcon, EllipsisVerticalIcon,
-  UsersIcon, WrenchScrewdriverIcon, CalendarDaysIcon, PhotoIcon
+  UsersIcon, WrenchScrewdriverIcon, CalendarDaysIcon, PhotoIcon, XMarkIcon
 } from '@heroicons/react/24/outline';
 
 const ESTADOS = ['Disponible', 'Ocupada', 'Mantenimiento'];
@@ -42,6 +42,7 @@ export default function RoomsPage() {
   const [menuOpen, setMenuOpen] = useState(null);
   const [preview, setPreview]   = useState('');
   const fileRef                 = useRef();
+  const [modalReservas, setModalReservas] = useState(null); // { room, reservas[] }
   const { isAdmin }             = useAuth();
 
   const load = () => api.get('/rooms').then(r => setRooms(r.data)).catch(() => toast.error('Error al cargar habitaciones.'));
@@ -93,9 +94,27 @@ export default function RoomsPage() {
     } catch (err) { toast.error(err.response?.data?.error || 'Error al eliminar.'); }
   };
 
-  const marcarLimpieza = (r) => {
-    toast.success(`Habitación #${r.numero} marcada para limpieza.`);
-    setMenuOpen(null);
+  const marcarLimpieza = async (r) => {
+    try {
+      await api.patch(`/rooms/${r.id}/limpieza`);
+      toast.success(`Habitación #${r.numero} en mantenimiento.`);
+      load(); setMenuOpen(null);
+    } catch { toast.error('Error al marcar limpieza.'); }
+  };
+
+  const marcarLimpiada = async (r) => {
+    try {
+      await api.patch(`/rooms/${r.id}/limpiada`);
+      toast.success(`Habitación #${r.numero} disponible nuevamente.`);
+      load(); setMenuOpen(null);
+    } catch { toast.error('Error al marcar como limpiada.'); }
+  };
+
+  const verReservas = async (r) => {
+    try {
+      const res = await api.get(`/rooms/${r.id}/reservas-futuras`);
+      setModalReservas({ room: r, reservas: res.data });
+    } catch { toast.error('Error al obtener reservas.'); }
   };
 
   const visible = rooms.filter(r =>
@@ -169,12 +188,19 @@ export default function RoomsPage() {
                 </p>
                 {r.descripcion && <p className="text-xs text-gray-400 line-clamp-2 mb-3">{r.descripcion}</p>}
                 <div className="flex gap-2 mt-3">
-                  <button className="flex-1 flex items-center justify-center gap-1.5 text-sm font-medium border border-gray-200 rounded-lg py-1.5 hover:bg-gray-50 transition-colors text-gray-700"
-                    onClick={() => marcarLimpieza(r)}>
-                    <WrenchScrewdriverIcon className="w-4 h-4" /> Marcar Limpieza
-                  </button>
+                  {r.estado === 'Mantenimiento' ? (
+                    <button className="flex-1 flex items-center justify-center gap-1.5 text-sm font-medium bg-green-600 text-white rounded-lg py-1.5 hover:opacity-90 transition-opacity"
+                      onClick={() => marcarLimpiada(r)}>
+                      <WrenchScrewdriverIcon className="w-4 h-4" /> Marcar Limpiada
+                    </button>
+                  ) : (
+                    <button className="flex-1 flex items-center justify-center gap-1.5 text-sm font-medium border border-gray-200 rounded-lg py-1.5 hover:bg-gray-50 transition-colors text-gray-700"
+                      onClick={() => marcarLimpieza(r)}>
+                      <WrenchScrewdriverIcon className="w-4 h-4" /> Marcar Limpieza
+                    </button>
+                  )}
                   <button className="flex-1 flex items-center justify-center gap-1.5 text-sm font-medium bg-finca-mid text-white rounded-lg py-1.5 hover:opacity-90 transition-opacity"
-                    onClick={() => toast(`Reservas de habitación #${r.numero}`)}>
+                    onClick={() => verReservas(r)}>
                     <CalendarDaysIcon className="w-4 h-4" /> Reservas
                   </button>
                 </div>
@@ -183,6 +209,52 @@ export default function RoomsPage() {
           );
         })}
       </div>
+
+      {/* Modal Reservas Futuras */}
+      {modalReservas && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl w-full max-w-lg shadow-xl">
+            <div className="p-5 border-b border-gray-100 flex items-center justify-between">
+              <div>
+                <h2 className="section-title">Reservas — Hab. {modalReservas.room.numero}</h2>
+                <p className="text-xs text-gray-400 mt-0.5">{modalReservas.room.tipo} · Cap. {modalReservas.room.capacidad} pers.</p>
+              </div>
+              <button onClick={() => setModalReservas(null)} className="p-1 rounded-lg hover:bg-gray-100">
+                <XMarkIcon className="w-5 h-5 text-gray-500" />
+              </button>
+            </div>
+            <div className="p-5">
+              {modalReservas.reservas.length === 0 ? (
+                <div className="text-center py-8 text-gray-400">
+                  <CalendarDaysIcon className="w-10 h-10 mx-auto mb-2 opacity-40" />
+                  <p className="text-sm">Sin reservas futuras para esta habitación</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {modalReservas.reservas.map(r => (
+                    <div key={r.id} className="flex items-center justify-between p-3 rounded-xl bg-gray-50 border border-gray-100">
+                      <div>
+                        <p className="font-semibold text-gray-800 text-sm">{r.cliente?.nombres} {r.cliente?.apellidos}</p>
+                        <p className="text-xs text-gray-400">{r.cliente?.numero_documento}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm font-medium text-gray-700">
+                          {new Date(r.fecha_ingreso + 'T12:00:00').toLocaleDateString('es-CO', { day:'numeric', month:'short' })}
+                          {' → '}
+                          {new Date(r.fecha_salida + 'T12:00:00').toLocaleDateString('es-CO', { day:'numeric', month:'short', year:'numeric' })}
+                        </p>
+                        <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${r.estado === 'Check-in' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'}`}>
+                          {r.estado}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Modal */}
       {modal && (
