@@ -47,7 +47,7 @@ export default function InventoryPage() {
   const [selProduct, setSelProduct] = useState(null);
   const [loading, setLoading]       = useState(false);
   const [page, setPage]             = useState(1);
-  const PER_PAGE = 5;
+  const PER_PAGE = 10;
   const { isAdmin } = useAuth();
 
   const [formProd, setFormProd] = useState({ categoria_id: '', nombre: '', unidad_medida: 'unidad', stock_actual: 0, stock_minimo: 5, precio_unitario: '' });
@@ -150,7 +150,8 @@ export default function InventoryPage() {
             <div className="col-span-1 text-right">Acciones</div>
           </div>
 
-          {/* Filas */}
+          {/* Filas con scroll */}
+          <div className="overflow-y-auto" style={{ maxHeight: '520px' }}>
           {paginated.map(p => {
             const est = estadoStock(p.stock_actual, p.stock_minimo);
             return (
@@ -202,13 +203,11 @@ export default function InventoryPage() {
             );
           })}
 
-          {/* Footer paginación */}
-          <div className="flex items-center justify-between px-5 py-3 text-sm text-gray-500">
-            <span>Mostrando {Math.min((page-1)*PER_PAGE+1, filtered.length)}–{Math.min(page*PER_PAGE, filtered.length)} de {filtered.length} productos</span>
-            <div className="flex gap-2">
-              <button className="btn-secondary btn-sm" disabled={page === 1} onClick={() => setPage(p => p-1)}>Anterior</button>
-              <button className="btn-secondary btn-sm" disabled={page >= totalPages} onClick={() => setPage(p => p+1)}>Siguiente</button>
-            </div>
+          </div>
+
+          {/* Footer */}
+          <div className="px-5 py-3 text-sm text-gray-500 border-t border-gray-100">
+            Mostrando {Math.min(PER_PAGE, filtered.length)} de {filtered.length} productos
           </div>
         </div>
 
@@ -254,7 +253,7 @@ export default function InventoryPage() {
             {altaRotacion.length > 0 && (
               <>
                 <p className="text-xs font-semibold text-gray-500 mb-2 flex items-center gap-1">
-                  <span className="text-green-500">↗</span> Top Consumo
+                  Top Consumo
                 </p>
                 <p className="text-xs text-gray-400 mb-2">Items más utilizados este mes</p>
                 <ResponsiveContainer width="100%" height={100}>
@@ -267,10 +266,6 @@ export default function InventoryPage() {
                     </Bar>
                   </BarChart>
                 </ResponsiveContainer>
-                <button className="w-full text-center text-xs text-green-600 font-medium mt-2 hover:underline"
-                  onClick={() => {}}>
-                  Ver reporte detallado →
-                </button>
               </>
             )}
           </div>
