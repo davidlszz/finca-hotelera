@@ -27,13 +27,16 @@ app.use(cors({
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
-// DB lazy-init — se ejecuta una sola vez por instancia serverless
+// DB init — en producción solo verifica conexión (schema ya existe por seed.js)
+// En desarrollo hace sync() para crear tablas automáticamente con SQLite
 let dbReady = false;
 app.use(async (req, res, next) => {
   if (dbReady) return next();
   try {
     await sequelize.authenticate();
-    await sequelize.sync();
+    if (process.env.NODE_ENV !== 'production') {
+      await sequelize.sync();
+    }
     dbReady = true;
     next();
   } catch (err) {

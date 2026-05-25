@@ -8,7 +8,8 @@ exports.getAll = async (req, res) => {
     const rooms = await Room.findAll({ where, order: [['numero', 'ASC']] });
     res.json(rooms);
   } catch (err) {
-    res.status(500).json({ error: 'Error al obtener habitaciones.' });
+    console.error('getAll rooms error:', err.message);
+    res.status(500).json({ error: 'Error al obtener habitaciones.', detail: err.message });
   }
 };
 
