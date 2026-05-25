@@ -34,7 +34,9 @@ app.use(async (req, res, next) => {
   if (dbReady) return next();
   try {
     await sequelize.authenticate();
-    if (process.env.NODE_ENV !== 'production') {
+    // sync() solo en SQLite (desarrollo local); en PostgreSQL el esquema
+    // ya existe (seed.js + migrate.js) y sync() puede fallar con ENUMs.
+    if (sequelize.getDialect() === 'sqlite') {
       await sequelize.sync();
     }
     dbReady = true;
