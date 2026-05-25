@@ -34,8 +34,13 @@ function OcupacionCalendar({ reservations, month, onPrev, onNext }) {
   const occupiedDays = new Set();
   reservations.forEach(r => {
     if (!['Confirmada', 'Check-in'].includes(r.estado)) return;
-    const start = new Date(r.fecha_ingreso);
-    const end   = new Date(r.fecha_salida);
+    // Parsear como fecha local para evitar desfase UTC
+    const parseLocal = (str) => {
+      const [y, m, d] = str.split('-').map(Number);
+      return new Date(y, m - 1, d);
+    };
+    const start = parseLocal(r.fecha_ingreso);
+    const end   = parseLocal(r.fecha_salida);
     const cur   = new Date(start);
     while (cur <= end) {
       if (cur.getFullYear() === year && cur.getMonth() === mon) {
