@@ -44,7 +44,7 @@ function DisponibilidadTimeline({ reservations, rooms }) {
   // Para cada habitación y día, buscar reserva activa
   const getReserva = (roomId, day) => {
     return reservations.find(r => {
-      if (!['Confirmada', 'Check-in', 'Check-out'].includes(r.estado)) return false;
+      if (!['Confirmada', 'Check-in'].includes(r.estado)) return false;
       const tiene = r.detalles?.some(d => d.habitacion_id === roomId || d.habitacion?.id === roomId);
       if (!tiene) return false;
       const ini = parseLocal(r.fecha_ingreso);
@@ -54,11 +54,10 @@ function DisponibilidadTimeline({ reservations, rooms }) {
   };
 
   // Color de celda
-  const cellColor = (reserva, day) => {
+  const cellColor = (reserva) => {
     if (!reserva) return '';
-    if (reserva.estado === 'Check-in')  return 'bg-green-400/80 text-white';
-    if (reserva.estado === 'Check-out') return 'bg-gray-300/80 text-gray-700';
-    return 'bg-blue-300/70 text-blue-900';
+    if (reserva.estado === 'Check-in') return 'bg-green-400/80 text-white';
+    return 'bg-blue-300/70 text-blue-900'; // Confirmada
   };
 
   // Etiqueta inicial de reserva (nombre cliente)
@@ -77,7 +76,7 @@ function DisponibilidadTimeline({ reservations, rooms }) {
           <div className="flex items-center gap-3 text-xs text-gray-500">
             <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-blue-300 inline-block"/>Confirmada</span>
             <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-green-400 inline-block"/>Check-in</span>
-            <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-gray-100 border border-gray-200 inline-block"/>Libre</span>
+            <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-gray-50 border border-gray-200 inline-block"/>Libre</span>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -114,7 +113,7 @@ function DisponibilidadTimeline({ reservations, rooms }) {
                   return (
                     <td key={day}
                       className={`text-center py-1.5 px-0.5 relative
-                        ${res ? cellColor(res, day) : isToday ? 'bg-finca-mid/10' : ''}
+                        ${res ? cellColor(res) : isToday ? 'bg-finca-mid/10' : ''}
                         ${isToday && !res ? 'ring-1 ring-inset ring-finca-mid/30' : ''}
                       `}
                       title={res ? `${res.cliente?.nombres} ${res.cliente?.apellidos} — ${res.estado}` : 'Libre'}
