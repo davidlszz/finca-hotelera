@@ -255,8 +255,10 @@ export default function DashboardPage() {
           sub={`${data.reservas.checkins_activos} en Check-in`} />
         <StatCard icon={UsersIcon} value={data.clientes.total}
           label="Clientes Registrados" color="bg-purple-500" />
-        <StatCard icon={CurrencyDollarIcon} value={formatCOP(data.finanzas.ingresos_mes)}
-          label="Ingresos del Mes" color="bg-finca-accent" />
+        {isAdmin && (
+          <StatCard icon={CurrencyDollarIcon} value={formatCOP(data.finanzas.ingresos_mes)}
+            label="Ingresos del Mes" color="bg-finca-accent" />
+        )}
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
