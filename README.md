@@ -63,6 +63,7 @@ Abrir **http://localhost:5173** en el navegador.
 - Gráfico de estado de habitaciones (disponibles / ocupadas / mantenimiento)
 - Mapa visual de habitaciones por color de estado
 - Panel de alertas de stock mínimo en inventario
+- Calendario de ocupación mensual navegable con reservas en tiempo real
 
 ### Reservas
 - Creación de reservas con verificación de disponibilidad en tiempo real
@@ -70,12 +71,19 @@ Abrir **http://localhost:5173** en el navegador.
 - Gestión de estados: Confirmada → Check-in → Check-out / Cancelada
 - Al hacer Check-in: habitaciones pasan a "Ocupada" automáticamente
 - Al hacer Check-out/Cancelar: habitaciones vuelven a "Disponible"
+- Lista activa (solo Confirmada y Check-in); históricas guardadas en BD para futuro módulo de historial
+- Timeline visual de disponibilidad por habitación navegable por fechas
+- Panel lateral con check-ins y check-outs del día en tiempo real
+- Indicador de capacidad ocupada del día
 
 ### Habitaciones
 - CRUD completo (solo Admin)
 - Filtros por estado
 - Vista en tarjetas con información de tipo, capacidad y precio
 - Endpoint `/api/rooms/availability?fecha_ingreso=&fecha_salida=` para disponibilidad
+- Botón "Marcar Limpieza": cambia el estado a Mantenimiento automáticamente
+- Botón "Marcar Limpiada": regresa la habitación a Disponible
+- Botón "Reservas": muestra modal con reservas futuras activas de esa habitación
 
 ### Clientes
 - Registro con validación de documento único (Ley 1581)
@@ -84,8 +92,11 @@ Abrir **http://localhost:5173** en el navegador.
 
 ### Inventario
 - Gestión de productos por categoría
+- Barra de nivel de stock visual (verde / amarillo / rojo)
+- Estado automático: Óptimo / Bajo / Crítico según stock mínimo
 - Registro de movimientos de Entrada/Salida con trazabilidad
 - Alertas automáticas cuando el stock ≤ stock mínimo
+- Panel de resumen de salud: total de items, stock crítico y top consumo
 - Historial completo de movimientos con usuario responsable
 
 ### Usuarios (solo Admin)
@@ -97,26 +108,38 @@ Abrir **http://localhost:5173** en el navegador.
 ## API REST — Endpoints Principales
 
 ```
-POST   /api/auth/login                  → Autenticación JWT
-GET    /api/dashboard/summary           → KPIs del dashboard
+POST   /api/auth/login                        → Autenticación JWT
 
-GET    /api/rooms                       → Listar habitaciones
-GET    /api/rooms/availability          → Disponibilidad por fechas
-POST   /api/rooms                       → Crear (Admin)
-PUT    /api/rooms/:id                   → Actualizar (Admin)
-DELETE /api/rooms/:id                   → Eliminar (Admin)
+GET    /api/dashboard/summary                 → KPIs del dashboard
 
-GET    /api/clients                     → Listar / buscar
-POST   /api/clients                     → Registrar
-PUT    /api/clients/:id                 → Actualizar
+GET    /api/rooms                             → Listar habitaciones
+GET    /api/rooms/availability                → Disponibilidad por fechas
+GET    /api/rooms/:id/reservas-futuras        → Reservas futuras de una habitación
+POST   /api/rooms                             → Crear (Admin)
+PUT    /api/rooms/:id                         → Actualizar (Admin)
+PATCH  /api/rooms/:id/limpieza                → Marcar en Mantenimiento
+PATCH  /api/rooms/:id/limpiada                → Marcar como Disponible
+DELETE /api/rooms/:id                         → Eliminar (Admin)
 
-GET    /api/reservations                → Listar (filtros: estado, fechas)
-POST   /api/reservations                → Crear con cálculo automático
-PATCH  /api/reservations/:id/estado     → Cambiar estado
+GET    /api/clients                           → Listar / buscar
+POST   /api/clients                           → Registrar
+PUT    /api/clients/:id                       → Actualizar
 
-GET    /api/inventory/products          → Productos (con stock_bajo=true)
-POST   /api/inventory/movements         → Registrar entrada/salida
-GET    /api/inventory/alerts            → Productos bajo stock mínimo
+GET    /api/reservations                      → Listar (filtros: estado, fechas)
+POST   /api/reservations                      → Crear con cálculo automático
+PATCH  /api/reservations/:id/estado           → Cambiar estado
+DELETE /api/reservations/:id                  → Eliminar (Admin)
+
+GET    /api/inventory/products                → Listar productos
+POST   /api/inventory/products                → Crear producto
+GET    /api/inventory/categories              → Listar categorías
+POST   /api/inventory/categories              → Crear categoría
+GET    /api/inventory/movements               → Historial de movimientos
+POST   /api/inventory/movements               → Registrar entrada/salida
+GET    /api/inventory/alerts                  → Productos bajo stock mínimo
+
+GET    /api/config                            → Configuración general (imagen banner)
+PUT    /api/config                            → Actualizar configuración (Admin)
 ```
 
 ---
@@ -146,12 +169,13 @@ finca-hotelera/
 │   ├── src/
 │   │   ├── config/database.js
 │   │   ├── models/          (User, Room, Client, Reservation, Inventory...)
-│   │   ├── controllers/     (auth, rooms, clients, reservations, inventory, dashboard)
+│   │   ├── controllers/     (auth, rooms, clients, reservations, inventory, dashboard, config)
 │   │   ├── routes/          (una por módulo)
 │   │   ├── middleware/       (auth.js JWT, rbac.js RBAC)
 │   │   └── app.js
 │   └── database/
 │       ├── seed.js
+        ├── config.json            (imagen banner y configuración general)
 │       └── finca_hotelera.sqlite  (generado al hacer seed)
 └── frontend/
     └── src/
