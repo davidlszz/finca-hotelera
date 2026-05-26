@@ -13,6 +13,6 @@ router.get('/products',            ctrl.getProducts);
 router.post('/products',           authorize('Admin'), ctrl.createProduct);
 router.put('/products/:id',        authorize('Admin'), ctrl.updateProduct);
 router.get('/movements',           ctrl.getMovements);
-router.post('/movements',          ctrl.registerMovement);
+router.post('/movements',          authorize('Admin'), ctrl.registerMovement);
 
 module.exports = router;
