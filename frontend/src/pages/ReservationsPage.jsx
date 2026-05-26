@@ -44,7 +44,7 @@ function DisponibilidadTimeline({ reservations, rooms }) {
   // Para cada habitación y día, buscar reserva activa
   const getReserva = (roomId, day) => {
     return reservations.find(r => {
-      if (!['Confirmada', 'Check-in'].includes(r.estado)) return false;
+      if (!['Confirmada', 'Check-in', 'Check-out'].includes(r.estado)) return false;
       const tiene = r.detalles?.some(d => d.habitacion_id === roomId || d.habitacion?.id === roomId);
       if (!tiene) return false;
       const ini = parseLocal(r.fecha_ingreso);
@@ -56,7 +56,8 @@ function DisponibilidadTimeline({ reservations, rooms }) {
   // Color de celda
   const cellColor = (reserva) => {
     if (!reserva) return '';
-    if (reserva.estado === 'Check-in') return 'bg-green-400/80 text-white';
+    if (reserva.estado === 'Check-in')  return 'bg-green-400/80 text-white';
+    if (reserva.estado === 'Check-out') return 'bg-gray-200/80 text-gray-400'; // completada
     return 'bg-blue-300/70 text-blue-900'; // Confirmada
   };
 
@@ -76,6 +77,7 @@ function DisponibilidadTimeline({ reservations, rooms }) {
           <div className="flex items-center gap-3 text-xs text-gray-500">
             <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-blue-300 inline-block"/>Confirmada</span>
             <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-green-400 inline-block"/>Check-in</span>
+            <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-gray-200 inline-block"/>Completada</span>
             <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-gray-50 border border-gray-200 inline-block"/>Libre</span>
           </div>
         </div>
@@ -140,7 +142,14 @@ function PanelHoy({ reservations, rooms }) {
   const hoy = format(new Date(), 'yyyy-MM-dd');
 
   const checkinsHoy  = reservations.filter(r => r.fecha_ingreso === hoy && ['Confirmada', 'Check-in'].includes(r.estado));
-  const checkoutsHoy = reservations.filter(r => r.fecha_salida === hoy && ['Check-in', 'Check-out'].includes(r.estado));
+  const checkoutsHoy = reservations.filter(r => {
+    if (!['Check-in', 'Check-out'].includes(r.estado)) return false;
+    // Salida programada para hoy
+    if (r.fecha_salida === hoy) return true;
+    // Check-out anticipado: salió hoy pero su fecha_salida era futura
+    if (r.estado === 'Check-out' && r.fecha_ingreso <= hoy && r.fecha_salida > hoy) return true;
+    return false;
+  });
 
   const totalCap   = rooms.reduce((a, r) => a + (r.capacidad || 0), 0);
   const ocupadas   = rooms.filter(r => r.estado === 'Ocupada').length;
