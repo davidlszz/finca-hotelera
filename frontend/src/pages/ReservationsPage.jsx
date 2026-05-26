@@ -140,7 +140,7 @@ function PanelHoy({ reservations, rooms }) {
   const hoy = format(new Date(), 'yyyy-MM-dd');
 
   const checkinsHoy  = reservations.filter(r => r.fecha_ingreso === hoy && ['Confirmada', 'Check-in'].includes(r.estado));
-  const checkoutsHoy = reservations.filter(r => r.fecha_salida  === hoy && r.estado === 'Check-in');
+  const checkoutsHoy = reservations.filter(r => r.fecha_salida === hoy && ['Check-in', 'Check-out'].includes(r.estado));
 
   const totalCap   = rooms.reduce((a, r) => a + (r.capacidad || 0), 0);
   const ocupadas   = rooms.filter(r => r.estado === 'Ocupada').length;
@@ -189,17 +189,25 @@ function PanelHoy({ reservations, rooms }) {
           <p className="text-xs text-gray-400 py-2">Sin check-outs hoy</p>
         ) : (
           <div className="space-y-2">
-            {checkoutsHoy.map(r => (
-              <div key={r.id} className="flex items-center gap-3 py-1 border-l-2 border-red-300 pl-2">
-                <div className="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center text-red-600 font-bold text-sm flex-shrink-0">
-                  {r.cliente?.nombres?.charAt(0)}
+            {checkoutsHoy.map(r => {
+              const procesado = r.estado === 'Check-out';
+              return (
+                <div key={r.id} className={`flex items-center gap-3 py-1 border-l-2 pl-2 ${procesado ? 'border-gray-300' : 'border-red-300'}`}>
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm flex-shrink-0 ${procesado ? 'bg-gray-100 text-gray-400' : 'bg-red-100 text-red-600'}`}>
+                    {r.cliente?.nombres?.charAt(0)}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className={`text-sm font-semibold ${procesado ? 'text-gray-400 line-through' : 'text-gray-800'}`}>
+                      {r.cliente?.nombres} {r.cliente?.apellidos}
+                    </p>
+                    <p className="text-xs text-gray-400">Hab. {r.detalles?.map(d => d.habitacion?.numero).join(', ')}</p>
+                  </div>
+                  {procesado && (
+                    <span className="text-xs text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded-full flex-shrink-0">✓</span>
+                  )}
                 </div>
-                <div>
-                  <p className="text-sm font-semibold text-gray-800">{r.cliente?.nombres} {r.cliente?.apellidos}</p>
-                  <p className="text-xs text-gray-400">Hab. {r.detalles?.map(d => d.habitacion?.numero).join(', ')}</p>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
@@ -296,7 +304,7 @@ export default function ReservationsPage() {
   // Por defecto solo muestra activas; si hay filtro explícito muestra ese estado
   const filtered = filtroEstado
     ? reservations.filter(r => r.estado === filtroEstado)
-    : reservations.filter(r => ['Confirmada', 'Check-in'].includes(r.estado));
+    : reservations.filter(r => ['Confirmada', 'Check-in', 'Check-out'].includes(r.estado));
 
   return (
     <div className="space-y-5">
